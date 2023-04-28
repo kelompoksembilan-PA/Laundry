@@ -1,0 +1,1 @@
+Program “Toko Laundry” ini dibuat dengan tujuan untuk memudahkan pemilik toko dalam mengelola bisnis. selain itu juga memudahkan karyawan/admin dalam melakukan pendataan barang-barang laundry pelanggan.
