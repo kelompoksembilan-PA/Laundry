@@ -1,198 +1,143 @@
-import bcrypt
 from os import system
-from platform import system as getsys
-import time
-import collections
-from datetime import datetime
 from prettytable import PrettyTable
-from bisect import bisect_left
+import mysql.connector
+from loginn import *
 
-def time():
-    jam = datetime.now()
-    waktu = int(jam.strftime("%H"))
-    system("cls")
-    print("="*52)
-    print(jam.strftime("[ Tanggal = %d/%b/%Y]))      [ Waktu = %H:%M:%S ]"))
-    print("="*52,"\n")
-
-def cls():
-    if getsys() == "WINDOWS": system("cls")
-    else:
-        system("clear")
-
-# Database
-id_laundry = [23,12,48]
-nama_laundry = ["imel","dinnu",'cesa']
-berat_laundry = [10,15,8]
+global cursor
+mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database = "datalaundry")
+cursor = mydb.cursor()
 
 # Linked List
-class Node(object):
-    def __init__(self,initvalue, next = None):
-        self.value=initvalue
-        self.next=None
-        self.previous=None
-    def getvalue(self):
-        return self.value
-    def getNext(self):
-        return self.next
-    def getPrevious(self):
-        return self.previous
-    def setvalue(self,newvalue):
-        self.value=newvalue
-    def setNext(self,newNext):
-        self.next=newNext
-    def setPrev(self,newPrevious):
-        self.previous=newPrevious
-    def r_next(self):
-        return self.next
+class Node:
+    def __init__(self,kode,id,nama,berat,harga):
+        self.kode = kode
+        self.id = id
+        self.nama = nama
+        self.berat = berat
+        self.harga = harga
+        self.next = None
 
 class linkedlist:
-    def __init__(self, data,next = None):
-        self.head = data
-        self.next = next
+    def __init__(self):
+        self.head = None
+        self.aktif = False
     
-    def sizeof (self,count=0):
-        x = self.head
-        while x:
-            count += 1
-            x = x.next
-        return count
+    def aktifasidb(self):
+        cursor.execute("SELECT * FROM datapemesanan")
+        for i in cursor:
+            temp = Node(i[0],i[1],i[2],i[3],i[4])
+            if self.head is None:
+                self.head = temp
+            else:
+                current = self.head
+                while current.next is not None:
+                    current = current.next
+                current.next = temp
+        self.aktif = True
     
-    def delete(self,data):
-        temp = self.head
-        if (temp is not None):
-            if(temp.data == data):
-                self.head = temp.next
-                temp = None
-                return
-            while (temp is not None):
-                if temp.data == data:
-                    break
-                prev = temp
+    def add(self):
+        if self.aktif == False:
+            print("harap aktifkan database terlebih dahulu")
+        elif self.aktif == True:
+            print("="*50) 
+            kodee = input("Masukkan Kode                            : ")
+            id = input("Masukkan Jenis Laundry                   : ")
+            nama = input("Masukkan Nama Pelanggan                  : ")
+            berat = int(input("Masukkan Laundry/Kg Pelanggan Yang Baru  : "))
+            harga_per_kg = {
+                "One Day Service": 8000,
+                "Dry Cleaning": 7000,
+                "Layanan Antar Jemput": 10000
+                }
+
+            if id in harga_per_kg:
+                total_harga = harga_per_kg[id] * berat
+            else:
+                print("Jenis pakaian tidak tersedia.")
+                total_harga = 0
+            
+            print("Total harga: Rp", total_harga)
+            print("="*50)   
+            harga = int(input("Masukkan Harga yang tertera             : "))
+            sql = "INSERT INTO datapemesanan (kode, id, nama, berat, harga) VALUES (%s , %s, %s, %s, %s)"
+            val = (kodee, id, nama, berat,harga)
+            cursor.execute(sql, (val))
+            mydb.commit()
+            temp = Node(kodee,id,nama,berat,harga)
+            if self.head is None:
+                self.head = temp
+            else:
+                current = self.head
+                while current.next is not None:
+                    current = current.next
+                current.next = temp
+        
+    def remove_task(self):
+        if self.aktif == False:
+            print("harap aktifkan database terlebih dahulu")
+        elif self.aktif == True:
+            sqlhps = "DELETE FROM datapemesanan WHERE kode = %s "
+            kd = input("Input Kode Pelanggan Ingin Dihapus : ")
+            hps = (kd,) 
+            temp = self.head
+            previous = None
+            while temp is not None:
+                if temp.kode == kd:
+                    if previous is None:
+                        self.head = temp.next
+                    else:
+                        previous.next = temp.next
+                    cursor.execute(sqlhps, hps)
+                    mydb.commit()
+                    return True
+                previous = temp
                 temp = temp.next
-            if (temp == None):
-                return 
-            prev.next = temp.next
-            temp = None
+            return True
     
-def make_list (elements):
-    head = linkedlist(elements[0])
-    for element in elements[1:]:
-        ptr = head
-        while ptr.next:
-            ptr = ptr.next
-        ptr.next = linkedlist(element)
-    return head 
-
-def print_list(head,head1,head2):
-    ptr = head
-    ptr1 = head1
-    ptr2 = head2
-    i=0
-    table = PrettyTable(["No.","ID","Nama","Laundry/Kg"])
-    while ptr:
-        table.add_row([i+1,ptr.head,ptr1.head,ptr2.head])
-        ptr = ptr.next
-        ptr1 = ptr1.next
-        ptr2 = ptr2.next
-        i+=1
-    print(table)
-
-class Solution:
-  def solve(self, node):
-    values = []
-    head = node
-    while node:
-        values.append(node.data)
-        node = node.next
-    mergeSort(values)
-    values = collections.deque(values)
-    node = head
-    while node:
-        node.val = values.popleft()
-        node = node.next
-    return head
-
-#======Function======
-def append():
-    IDx = make_list(id_laundry)             
-    Name = make_list(nama_laundry)
-    Weight = make_list(berat_laundry)
-    print_list(IDx,Name,Weight)
-    print("="*40)
-    print("---       Masukkan Data Laundry      ---")     
-    print("="*40)
-    ID = int(input("Masukkan ID Pelanggan         : "))
-    id_laundry.append(ID)
-    Nama = input("Masukkan Nama Pelanggan       : ")
-    nama_laundry.append(Nama)
-    Kg = int(input("Masukkan Laundry/Kg Pelanggan : "))
-    berat_laundry.append(Kg)
-    IDx = make_list(id_laundry)
-    Name = make_list(nama_laundry)
-    Weight = make_list(berat_laundry)
-    print_list(IDx,Name,Weight)
-    print("="*30)
-    print ("Data Pelanggan Berhasil Dibuat ")
-    print("="*30)
-    return
-
-def update():
-    IDx = make_list(id_laundry)             
-    Name = make_list(nama_laundry)
-    Weight = make_list(berat_laundry)
-    print_list(IDx,Name,Weight)
-    while True:
-        print("="*34)
-        print("---      Edit Data Laundry     ---")     
-        print("="*34)
-        try:
-            ID = int(input("Input Nomor Pelanggan Ingin Diubah : "))
-        except:
-            print("Gunakan Angka Saat Menginput Pilihan")
-            continue
-        if ID <= 0 :
-            print("Pilihan Tidak Tersedia")
-            continue
-        idx = ID - 1
-        if (idx > len(id_laundry) - 1):
-            print ("No Tidak Tersedia")
-            continue
+    def update(self):
+        if not self.aktif:
+            print("harap aktifkan database terlebih dahulu")
         else:
-            try:
-                tambah = input("Masukkan Laundry/Kg Pelanggan Yang Baru :  ")
-            except:
-                print("Gunakan Angka Saat Menginput Pilihan")
-                continue
-            hasil = tambah 
-            berat_laundry [idx] = hasil
-            return
+            print("="*50)
+            kode = input("Masukkan Kode Yang Ingin Diubah Datanya : ")
+            sqlupt = "UPDATE datapemesanan SET id = %s, berat = %s, harga = %s WHERE kode = %s"
+            if self.head is not None:
+                temp = self.head
+                idbaru = input("Masukkan Jenis Laundry baru              : ")
+                namabaru = input("Masukkan Nama Pelanggan baru             : ")
+                beratbaru = int(input("Masukkan Laundry/Kg Pelanggan Yang Baru  : "))
+                harga_per_kg = {
+                "One Day Service": [8000],
+                "Dry Cleaning": [7000],
+                "Layanan Antar Jemput": [10000]
+                }
 
-def delete():
-    while True:
-        print("="*34)
-        print("---      Hapus Data Laundry    ---")     
-        print("="*34)
-        IDx = make_list(id_laundry)
-        Name = make_list(nama_laundry)
-        Weight = make_list(berat_laundry)
-        print_list(IDx,Name,Weight)
-        try:
-            ID = int(input("Input Nomor Pelanggan Ingin Dihapus : ")) 
-        except:
-            print("Gunakan Angka Saat Menginput Pilihan")
-            continue
-        ID = ID - 1
-        hapus = ID 
-        if ID == (hapus):
-            print("Anda Telah Menghapus ID",str(id_laundry.pop(ID)),"dari Data Laundry")
-            IDx = make_list(id_laundry)
-            Name = make_list(nama_laundry)
-            Weight = make_list(berat_laundry)
-            print_list(IDx,Name,Weight)
-            return
-        else:
-            print("Pilihan Tidak Tersedia")
+                if idbaru in harga_per_kg:
+                    a = harga_per_kg[idbaru][0] * beratbaru
+                else:
+                    print("Jenis pakaian tidak tersedia.")
+                    a = 0
+            
+                print("Total harga: Rp" , a)
+                print("="*50)
+                hargabaru = int(input("Masukkan Harga yang tertera             : "))
+
+                while temp is not None and temp.kode != kode:
+                    temp = temp.next
+                        
+                if temp is not None:
+                    temp.id, temp.nama, temp.berat, temp.harga = idbaru, namabaru, beratbaru, hargabaru
+                    cursor.execute(sqlupt, (idbaru, beratbaru, hargabaru, kode))
+                    mydb.commit()
+                else:
+                    system("cls")
+                    print(f"Kode {kode} tidak ditemukan dalam data pemesanan")
+            else:
+                print("data masih kosong")
 
 # Merge Sorting
 def mergeSort(array):
